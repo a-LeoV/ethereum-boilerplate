@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useMoralis } from "react-moralis";
 import { Card, Image, Tooltip, Modal, Input } from "antd";
-import { useNFTBalance } from "hooks/useNFTBalance";
-import { FileSearchOutlined, ShoppingCartOutlined } from "@ant-design/icons";
+import { useMRBalance } from "hooks/useMRBalance";
+import { FileSearchOutlined, SearchOutlined } from "@ant-design/icons";
 import { useMoralisDapp } from "providers/MoralisDappProvider/MoralisDappProvider";
 import { getExplorer } from "helpers/networks";
 import AddressInput from "./AddressInput";
@@ -20,8 +20,8 @@ const styles = {
   },
 };
 
-function NFTBalance() {
-  const { NFTBalance } = useNFTBalance();
+function MRBalance() {
+  const { MRBalance } = useMRBalance();
   const { chainId } = useMoralisDapp();
   const { Moralis } = useMoralis();
   const [visible, setVisibility] = useState(false);
@@ -63,25 +63,29 @@ function NFTBalance() {
     setAmount(e.target.value);
   };
 
-  console.log(NFTBalance);
+  console.log(MRBalance);
   return (
     <>
       <div style={styles.NFTs}>
-        {NFTBalance &&
-          NFTBalance.map((nft, index) => (
+        {MRBalance &&
+          MRBalance.map((nft, index) => (
             <Card
               hoverable
               actions={[
                 <Tooltip title="View On Blockexplorer">
-                  <FileSearchOutlined
-                    onClick={() =>
-                      window.open(`${getExplorer(chainId)}address/${nft.token_address}`, "_blank")
-                    }
-                  />
+                <FileSearchOutlined
+                  onClick={() =>
+                    window.open(`${getExplorer(chainId)}address/${nft.token_address}`, "_blank")
+                  }
+                />
                 </Tooltip>,
-                <Tooltip title="Burn 2 Mint">
-                  <ShoppingCartOutlined onClick={() => alert("add burn 2 mint contract function integration")} />
-                </Tooltip>,
+                <Tooltip title="View On OpenSea">
+                <SearchOutlined
+                  onClick={() =>
+                    window.open(`${"https://testnets.opensea.io/assets/0x17e8a8c7bc7232a4b11ea6f21ce94aa633bc878c/"}${nft.token_id}`, "_blank")
+                  }
+                />
+              </Tooltip>,
               ]}
               style={{ width: 240, border: "2px solid #e7eaf3" }}
               cover={
@@ -95,18 +99,27 @@ function NFTBalance() {
               }
               key={index}
             >
-              <Meta title={nft.name} description={nft.token_address} />
+              <Meta title={nft.name + " " + nft.token_id} description={nft.token_address} />
             </Card>
           ))}
       </div>
       <Modal
-        title={`Transfer ${nftToSend?.name || "NFT"}`}
+        title={`Transfer ${nftToSend?.name + " " + nftToSend?.token_id || "NFT"}`}
         visible={visible}
         onCancel={() => setVisibility(false)}
         onOk={() => transfer(nftToSend, amountToSend, receiverToSend)}
         confirmLoading={isPending}
         okText="Send"
       >
+           <img
+                src={nftToSend?.image}
+                style={{
+                    width: "250px",
+                    margin: "auto",
+                    borderRadius: "10px",
+                    marginBottom: "15px",
+                }}
+                />
         <AddressInput autoFocus placeholder="Receiver" onChange={setReceiver} />
         {nftToSend && nftToSend.contract_type === "erc1155" && (
           <Input placeholder="amount to send" onChange={(e) => handleChange(e)} />
@@ -116,4 +129,4 @@ function NFTBalance() {
   );
 }
 
-export default NFTBalance;
+export default MRBalance;

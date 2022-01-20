@@ -1,12 +1,16 @@
 import { useMoralisDapp } from "providers/MoralisDappProvider/MoralisDappProvider";
+
 import { useMoralisWeb3Api, useMoralisWeb3ApiCall } from "react-moralis";
 import { useIPFS } from "./useIPFS";
 import { useMemo } from "react";
 
 
+
+
 export const useRUGBalance2 = (addr, token_address) => {
     const { account } = useMoralisWeb3Api();
     const { chainId, walletAddress } = useMoralisDapp();
+    const { token } = useMoralisWeb3Api();
     const { resolveLink } = useIPFS();
     const getNFTsForContractOpts = {
         chain: chainId,

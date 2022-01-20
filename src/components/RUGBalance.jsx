@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { useMoralis } from "react-moralis";
-import { Card, Image, Tooltip, Modal, Input } from "antd";
-import { useNFTBalance } from "hooks/useNFTBalance";
-import { FileSearchOutlined, ShoppingCartOutlined } from "@ant-design/icons";
+import { Card, Image, Tooltip, Modal, Button } from "antd";
+import { useRUGBalance } from "hooks/useRUGBalance";
+import { CheckOutlined, FileSearchOutlined, FireOutlined } from "@ant-design/icons";
 import { useMoralisDapp } from "providers/MoralisDappProvider/MoralisDappProvider";
 import { getExplorer } from "helpers/networks";
-import AddressInput from "./AddressInput";
+import { useWeb3ExecuteFunction } from "react-moralis";
 const { Meta } = Card;
 
 const styles = {
@@ -20,57 +19,80 @@ const styles = {
   },
 };
 
-function NFTBalance() {
-  const { NFTBalance } = useNFTBalance();
-  const { chainId } = useMoralisDapp();
-  const { Moralis } = useMoralis();
+function RUGBalance() {
+  const { RUGBalance } = useRUGBalance();
+  const { chainId, crContractABI, crAddress, mrAddress, mrContractABI } = useMoralisDapp();
   const [visible, setVisibility] = useState(false);
-  const [receiverToSend, setReceiver] = useState(null);
-  const [amountToSend, setAmount] = useState(null);
-  const [nftToSend, setNftToSend] = useState(null);
+  const [nftToBurn, setnftToBurn] = useState(null);
+  const [approve, setapproval] = useState(null);
   const [isPending, setIsPending] = useState(false);
+  const contractProcessor = useWeb3ExecuteFunction();
+  const crContractABIJson = JSON.parse(crContractABI);
+  const mrContractABIJson = JSON.parse(mrContractABI);
+  const setApprovalForAllFunction = "setApprovalForAll";
+  const burn2mint_ONE_RUGFunction = "burn2mint_ONE_RUG"
 
-  async function transfer(nft, amount, receiver) {
-    const options = {
-      type: nft.contract_type,
-      tokenId: nft.token_id,
-      receiver: receiver,
-      contractAddress: nft.token_address,
-    };
-
-    if (options.type === "erc1155") {
-      options.amount = amount;
-    }
-
-    setIsPending(true);
-    await Moralis.transfer(options)
-      .then((tx) => {
-        console.log(tx);
-        setIsPending(false);
-      })
-      .catch((e) => {
-        alert(e.message);
-        setIsPending(false);
-      });
+  async function setApprovalForAll(){
+      const ops = {
+          contractAddress: crAddress,
+          functionName: setApprovalForAllFunction,
+          abi: crContractABIJson,
+        params : {
+            operator: mrAddress,
+            approved: true,
+        }
+      };
+      await contractProcessor.fetch({
+        params: ops,
+        onSuccess: () => {
+            alert("Burn 2 Mint is approved")
+        },
+        onError: (error) => {
+            alert(error)
+        }
+    })
   }
 
-  const handleTransferClick = (nft) => {
-    setNftToSend(nft);
+  async function burn2mint_ONE_RUG(nft) {
+    const ops = {
+        contractAddress: mrAddress,
+        functionName: burn2mint_ONE_RUGFunction,
+        abi: mrContractABIJson,
+        params : {
+            tokenId: nft.token_id,
+        }
+    };
+
+    await contractProcessor.fetch({
+        params: ops,
+        onSuccess: () => {
+            alert("CryptoRug burned successfully - MetaRug minted")
+        },
+        onError: (error) => {
+            alert(error)
+        }
+    })
+  }
+
+  const handleBurn2Mint_ONE_RUG = (nft) => {
+    setnftToBurn(nft);
     setVisibility(true);
   };
 
-  const handleChange = (e) => {
-    setAmount(e.target.value);
+  const handlesetApprovalForAll = (approve) => {
+    setapproval(approve);
+    setVisibility(true);
   };
 
-  console.log(NFTBalance);
+
+  console.log(RUGBalance);
   return (
     <>
       <div style={styles.NFTs}>
-        {NFTBalance &&
-          NFTBalance.map((nft, index) => (
-            <Card
-              hoverable
+        {RUGBalance &&
+          RUGBalance.map((nft, index) => (
+            <Card 
+              hoverable onClick={() => handleBurn2Mint_ONE_RUG(nft)}
               actions={[
                 <Tooltip title="View On Blockexplorer">
                   <FileSearchOutlined
@@ -80,7 +102,7 @@ function NFTBalance() {
                   />
                 </Tooltip>,
                 <Tooltip title="Burn 2 Mint">
-                  <ShoppingCartOutlined onClick={() => alert("add burn 2 mint contract function integration")} />
+                  <FireOutlined onClick={() => handleBurn2Mint_ONE_RUG(nft)} />
                 </Tooltip>,
               ]}
               style={{ width: 240, border: "2px solid #e7eaf3" }}
@@ -95,25 +117,36 @@ function NFTBalance() {
               }
               key={index}
             >
-              <Meta title={nft.name} description={nft.token_address} />
+              <Meta title={nft.name + " #" + nft.token_id} description={nft.token_address} />
             </Card>
           ))}
       </div>
       <Modal
-        title={`Transfer ${nftToSend?.name || "NFT"}`}
+        title={`Burn ${nftToBurn?.name + " #" + nftToBurn?.token_id || "NFT"}`}
         visible={visible}
         onCancel={() => setVisibility(false)}
-        onOk={() => transfer(nftToSend, amountToSend, receiverToSend)}
+        onOk={() => burn2mint_ONE_RUG(nftToBurn)}
         confirmLoading={isPending}
-        okText="Send"
+        okText="Burn"
       >
-        <AddressInput autoFocus placeholder="Receiver" onChange={setReceiver} />
-        {nftToSend && nftToSend.contract_type === "erc1155" && (
-          <Input placeholder="amount to send" onChange={(e) => handleChange(e)} />
-        )}
+          <img
+                src={nftToBurn?.image}
+                style={{
+                    width: "250px",
+                    margin: "auto",
+                    borderRadius: "10px",
+                    marginBottom: "15px",
+                }}
+                />
+        <Button type="primary" icon={<CheckOutlined />} 
+        onClick={() => setApprovalForAll()}
+        > Approve
+        </Button>
       </Modal>
     </>
   );
 }
 
-export default NFTBalance;
+export default RUGBalance;
+
+
